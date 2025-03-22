@@ -10,6 +10,26 @@ import datetime  # Add datetime module
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(SCRIPT_DIR, "arbitrage_opportunities.db")
 
+# ========================= FILTER CONFIGURATION =========================
+# Set to None or empty list to include all options
+
+# Bookmakers to include in arbitrage search (set to None to include all)
+ENABLED_BOOKMAKERS = []
+
+# Profit margin range (percentage)
+MIN_PROFIT_MARGIN = 0.5  # Minimum profit margin to consider (%)
+MAX_PROFIT_MARGIN = 10.0  # Maximum profit margin to consider (%) - very high margins might indicate errors
+
+# Sports to include (set to None to include all)
+ENABLED_SPORTS = []
+
+# Bet types to include
+ENABLED_BET_TYPES = ["Moneyline", "Over/Under"]
+
+# Time criteria for events
+MAX_HOURS_UNTIL_EVENT = 24  # Only consider events within this many hours
+
+# ====================================================================
 
 # API Key for The-Odds-API (Replace with your actual key)
 API_KEY = ""  # Replace with your The-Odds-API key
@@ -21,7 +41,8 @@ SPORTS = [
     "americanfootball_cfl", "americanfootball_ncaaf", "americanfootball_nfl", 
     "americanfootball_nfl_preseason", "americanfootball_ufl",
     
-   
+    # Aussie Rules
+    "aussierules_afl",
     
     # Baseball
     "baseball_mlb", "baseball_milb", "baseball_npb", "baseball_kbo", "baseball_ncaa",
@@ -156,7 +177,10 @@ def fetch_odds():
     odds_data = []
     current_time = datetime.datetime.now(datetime.timezone.utc)  # Get current time in UTC
     
-    for sport in SPORTS:
+    # Filter sports based on enabled sports
+    sports_to_fetch = ENABLED_SPORTS if ENABLED_SPORTS else SPORTS
+    
+    for sport in sports_to_fetch:
         for market in MARKETS:
             url = BASE_URL.format(sport_key=sport)
             params = {
@@ -195,8 +219,8 @@ def fetch_odds():
                         time_diff = commence_time - current_time
                         hours_until_event = time_diff.total_seconds() / 3600
                         
-                        # Skip events that start more than 24 hours from now
-                        if hours_until_event > 24:
+                        # Skip events that start more than MAX_HOURS_UNTIL_EVENT hours from now
+                        if hours_until_event > MAX_HOURS_UNTIL_EVENT:
                             print(f"Skipping event starting in {hours_until_event:.1f} hours: {event.get('home_team', '')} vs {event.get('away_team', '')}")
                             continue
                             
@@ -211,6 +235,10 @@ def fetch_odds():
                         home_team = event.get('home_team', '')
                         away_team = event.get('away_team', '')
                         
+                        # Filter bookmakers if enabled
+                        if ENABLED_BOOKMAKERS:
+                            bookmakers = [bm for bm in bookmakers if bm['title'] in ENABLED_BOOKMAKERS]
+                        
                         for bookmaker in bookmakers:
                             try:
                                 bookmaker_name = bookmaker['title']
@@ -221,6 +249,10 @@ def fetch_odds():
                                     try:
                                         market_key = market_data.get('key')
                                         if market_key == 'totals':
+                                            # Check if Over/Under bet type is enabled
+                                            if ENABLED_BET_TYPES and "Over/Under" not in ENABLED_BET_TYPES:
+                                                continue
+                                                
                                             outcomes = market_data.get('outcomes', [])
                                             if not outcomes:
                                                 continue
@@ -272,6 +304,10 @@ def fetch_odds():
                                                     print(f"Under option: {under_option}")
                                                     continue
                                         elif market_key == 'h2h':
+                                            # Check if Moneyline bet type is enabled
+                                            if ENABLED_BET_TYPES and "Moneyline" not in ENABLED_BET_TYPES:
+                                                continue
+                                                
                                             outcomes = market_data.get('outcomes', [])
                                             
                                             # Ensure this is a two-way market (just home and away, no draw)
@@ -370,6 +406,13 @@ def find_arbitrage(odds_list):
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
                     profit_margin = (1 - total_prob) * 100
+                    
+                    # Skip if profit margin is outside the specified range
+                    if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
+                       (MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN):
+                        print(f"Skipping opportunity with profit margin {profit_margin:.2f}% (outside range {MIN_PROFIT_MARGIN}%-{MAX_PROFIT_MARGIN}%)")
+                        continue
+                    
                     bet1 = f"Over {bm1['total_line']}"
                     bet2 = f"Under {bm2['total_line']}"
                     home_team = bm1['home_team']
@@ -402,6 +445,13 @@ def find_arbitrage(odds_list):
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
                     profit_margin = (1 - total_prob) * 100
+                    
+                    # Skip if profit margin is outside the specified range
+                    if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
+                       (MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN):
+                        print(f"Skipping opportunity with profit margin {profit_margin:.2f}% (outside range {MIN_PROFIT_MARGIN}%-{MAX_PROFIT_MARGIN}%)")
+                        continue
+                    
                     bet1 = f"Under {bm1['total_line']}"
                     bet2 = f"Over {bm2['total_line']}"
                     home_team = bm1['home_team']
@@ -444,6 +494,13 @@ def find_arbitrage(odds_list):
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
                     profit_margin = (1 - total_prob) * 100
+                    
+                    # Skip if profit margin is outside the specified range
+                    if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
+                       (MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN):
+                        print(f"Skipping opportunity with profit margin {profit_margin:.2f}% (outside range {MIN_PROFIT_MARGIN}%-{MAX_PROFIT_MARGIN}%)")
+                        continue
+                    
                     bet1 = f"{home_team} (Win)"
                     bet2 = f"{away_team} (Win)"
                     
@@ -474,6 +531,13 @@ def find_arbitrage(odds_list):
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
                     profit_margin = (1 - total_prob) * 100
+                    
+                    # Skip if profit margin is outside the specified range
+                    if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
+                       (MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN):
+                        print(f"Skipping opportunity with profit margin {profit_margin:.2f}% (outside range {MIN_PROFIT_MARGIN}%-{MAX_PROFIT_MARGIN}%)")
+                        continue
+                    
                     bet1 = f"{away_team} (Win)"
                     bet2 = f"{home_team} (Win)"
                     
@@ -496,6 +560,9 @@ def find_arbitrage(odds_list):
                         f"{bet1} / {bet2}",
                         "Moneyline"
                     ))
+    
+    # Sort opportunities by profit margin (highest first)
+    arbitrage_opportunities.sort(key=lambda x: x[14], reverse=True)
     
     return arbitrage_opportunities
 
@@ -534,6 +601,15 @@ def update_arbitrage_opportunities():
                          (event, sport, league, market, bm1, team1, odds1, bm1_link, bet1,
                           bm2, team2, odds2, bm2_link, bet2, profit_margin, total_line, bet_type))
             new_opportunities += 1
+    
+    # Print results to the console
+    print("=== FILTER SETTINGS ===")
+    print(f"Bookmakers: {ENABLED_BOOKMAKERS if ENABLED_BOOKMAKERS else 'All'}")
+    print(f"Sports: {ENABLED_SPORTS if ENABLED_SPORTS else 'All'}")
+    print(f"Bet Types: {ENABLED_BET_TYPES if ENABLED_BET_TYPES else 'All'}")
+    print(f"Profit Range: {MIN_PROFIT_MARGIN}% - {MAX_PROFIT_MARGIN}%")
+    print(f"Max Hours Until Event: {MAX_HOURS_UNTIL_EVENT}")
+    print(f"Found {len(opportunities)} arbitrage opportunities matching your filters")
     
     # Remove old opportunities
     cursor.execute("DELETE FROM opportunities WHERE timestamp < DATETIME('now', '-5 minutes')")
