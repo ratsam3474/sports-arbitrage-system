@@ -42,7 +42,7 @@ SPORTS = [
     "americanfootball_nfl_preseason", "americanfootball_ufl",
     
     # Aussie Rules
-    "aussierules_afl",
+    #"aussierules_afl",
     
     # Baseball
     "baseball_mlb", "baseball_milb", "baseball_npb", "baseball_kbo", "baseball_ncaa",
