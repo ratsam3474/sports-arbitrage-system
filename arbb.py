@@ -405,7 +405,7 @@ def find_arbitrage(odds_list):
                 total_prob = implied_prob1 + implied_prob2
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
-                    profit_margin = (1 - total_prob) * 100
+                    profit_margin = ((1 - total_prob) / total_prob) * 100
                     
                     # Skip if profit margin is outside the specified range
                     if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
