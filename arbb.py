@@ -18,7 +18,7 @@ ENABLED_BOOKMAKERS = []
 
 # Profit margin range (percentage)
 MIN_PROFIT_MARGIN = 0.5  # Minimum profit margin to consider (%)
-MAX_PROFIT_MARGIN = 10.0  # Maximum profit margin to consider (%) - very high margins might indicate errors
+MAX_PROFIT_MARGIN = 5.0  # Maximum profit margin to consider (%) - very high margins might indicate errors
 
 # Sports to include (set to None to include all)
 ENABLED_SPORTS = []
@@ -32,7 +32,7 @@ MAX_HOURS_UNTIL_EVENT = 24  # Only consider events within this many hours
 # ====================================================================
 
 # API Key for The-Odds-API (Replace with your actual key)
-API_KEY = ""  # Replace with your The-Odds-API key
+API_KEY = "a701e5b5cc998ed02c197eef0f4e6027"  # Replace with your The-Odds-API key
 BASE_URL = "https://api.the-odds-api.com/v4/sports/{sport_key}/odds"
 
 # List of sports and leagues to track
@@ -363,7 +363,18 @@ def fetch_odds():
 
 # Function to find arbitrage opportunities
 def find_arbitrage(odds_list):
+    global MIN_PROFIT_MARGIN, MAX_PROFIT_MARGIN  # Ensure access to filter variables
+    
     arbitrage_opportunities = []
+    
+    # Debug: Print filter settings
+    print(f"\n=== DEBUG: Filter settings ===")
+    print(f"MIN_PROFIT_MARGIN: {MIN_PROFIT_MARGIN} (type: {type(MIN_PROFIT_MARGIN)})")
+    print(f"MAX_PROFIT_MARGIN: {MAX_PROFIT_MARGIN} (type: {type(MAX_PROFIT_MARGIN)})")
+    
+    # Ensure filter values are floats
+    MIN_PROFIT_MARGIN = float(MIN_PROFIT_MARGIN) if MIN_PROFIT_MARGIN is not None else None
+    MAX_PROFIT_MARGIN = float(MAX_PROFIT_MARGIN) if MAX_PROFIT_MARGIN is not None else None
     
     # Group odds by event and market type
     grouped_events = {}
@@ -405,13 +416,29 @@ def find_arbitrage(odds_list):
                 total_prob = implied_prob1 + implied_prob2
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
+                    # FIXED: Use correct profit margin formula
                     profit_margin = ((1 - total_prob) / total_prob) * 100
                     
-                    # Skip if profit margin is outside the specified range
-                    if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
-                       (MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN):
-                        print(f"Skipping opportunity with profit margin {profit_margin:.2f}% (outside range {MIN_PROFIT_MARGIN}%-{MAX_PROFIT_MARGIN}%)")
+                    # Debug the filtering logic
+                    print(f"\n=== DEBUG: Checking totals opportunity (Over vs Under) ===")
+                    print(f"Event: {event_key}")
+                    print(f"Bookmaker 1: {bm1['bookmaker']} (Over)")
+                    print(f"Bookmaker 2: {bm2['bookmaker']} (Under)")
+                    print(f"Calculated profit_margin: {profit_margin:.4f}%")
+                    print(f"MIN check: {MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN if MIN_PROFIT_MARGIN is not None else 'N/A'}")
+                    print(f"MAX check: {MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN if MAX_PROFIT_MARGIN is not None else 'N/A'}")
+                    
+                    # Check minimum profit margin
+                    if MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN:
+                        print(f"❌ FILTERED OUT: profit_margin ({profit_margin:.4f}) < MIN_PROFIT_MARGIN ({MIN_PROFIT_MARGIN})")
                         continue
+                    
+                    # Check maximum profit margin
+                    if MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN:
+                        print(f"❌ FILTERED OUT: profit_margin ({profit_margin:.4f}) > MAX_PROFIT_MARGIN ({MAX_PROFIT_MARGIN})")
+                        continue
+                    
+                    print(f"✅ PASSED FILTER: Adding opportunity with {profit_margin:.4f}% profit margin")
                     
                     bet1 = f"Over {bm1['total_line']}"
                     bet2 = f"Under {bm2['total_line']}"
@@ -444,13 +471,29 @@ def find_arbitrage(odds_list):
                 total_prob = implied_prob1 + implied_prob2
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
-                    profit_margin = (1 - total_prob) * 100
+                    # FIXED: Use correct profit margin formula
+                    profit_margin = ((1 - total_prob) / total_prob) * 100
                     
-                    # Skip if profit margin is outside the specified range
-                    if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
-                       (MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN):
-                        print(f"Skipping opportunity with profit margin {profit_margin:.2f}% (outside range {MIN_PROFIT_MARGIN}%-{MAX_PROFIT_MARGIN}%)")
+                    # Debug the filtering logic
+                    print(f"\n=== DEBUG: Checking totals opportunity (Under vs Over) ===")
+                    print(f"Event: {event_key}")
+                    print(f"Bookmaker 1: {bm1['bookmaker']} (Under)")
+                    print(f"Bookmaker 2: {bm2['bookmaker']} (Over)")
+                    print(f"Calculated profit_margin: {profit_margin:.4f}%")
+                    print(f"MIN check: {MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN if MIN_PROFIT_MARGIN is not None else 'N/A'}")
+                    print(f"MAX check: {MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN if MAX_PROFIT_MARGIN is not None else 'N/A'}")
+                    
+                    # Check minimum profit margin
+                    if MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN:
+                        print(f"❌ FILTERED OUT: profit_margin ({profit_margin:.4f}) < MIN_PROFIT_MARGIN ({MIN_PROFIT_MARGIN})")
                         continue
+                    
+                    # Check maximum profit margin
+                    if MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN:
+                        print(f"❌ FILTERED OUT: profit_margin ({profit_margin:.4f}) > MAX_PROFIT_MARGIN ({MAX_PROFIT_MARGIN})")
+                        continue
+                    
+                    print(f"✅ PASSED FILTER: Adding opportunity with {profit_margin:.4f}% profit margin")
                     
                     bet1 = f"Under {bm1['total_line']}"
                     bet2 = f"Over {bm2['total_line']}"
@@ -493,13 +536,29 @@ def find_arbitrage(odds_list):
                 total_prob = implied_prob1 + implied_prob2
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
-                    profit_margin = (1 - total_prob) * 100
+                    # FIXED: Use correct profit margin formula
+                    profit_margin = ((1 - total_prob) / total_prob) * 100
                     
-                    # Skip if profit margin is outside the specified range
-                    if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
-                       (MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN):
-                        print(f"Skipping opportunity with profit margin {profit_margin:.2f}% (outside range {MIN_PROFIT_MARGIN}%-{MAX_PROFIT_MARGIN}%)")
+                    # Debug the filtering logic
+                    print(f"\n=== DEBUG: Checking h2h opportunity (Home vs Away) ===")
+                    print(f"Event: {event_key}")
+                    print(f"Bookmaker 1: {bm1['bookmaker']} ({home_team})")
+                    print(f"Bookmaker 2: {bm2['bookmaker']} ({away_team})")
+                    print(f"Calculated profit_margin: {profit_margin:.4f}%")
+                    print(f"MIN check: {MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN if MIN_PROFIT_MARGIN is not None else 'N/A'}")
+                    print(f"MAX check: {MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN if MAX_PROFIT_MARGIN is not None else 'N/A'}")
+                    
+                    # Check minimum profit margin
+                    if MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN:
+                        print(f"❌ FILTERED OUT: profit_margin ({profit_margin:.4f}) < MIN_PROFIT_MARGIN ({MIN_PROFIT_MARGIN})")
                         continue
+                    
+                    # Check maximum profit margin
+                    if MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN:
+                        print(f"❌ FILTERED OUT: profit_margin ({profit_margin:.4f}) > MAX_PROFIT_MARGIN ({MAX_PROFIT_MARGIN})")
+                        continue
+                    
+                    print(f"✅ PASSED FILTER: Adding opportunity with {profit_margin:.4f}% profit margin")
                     
                     bet1 = f"{home_team} (Win)"
                     bet2 = f"{away_team} (Win)"
@@ -530,13 +589,29 @@ def find_arbitrage(odds_list):
                 total_prob = implied_prob1 + implied_prob2
                 
                 if total_prob < 1:  # Two-way arbitrage opportunity found
-                    profit_margin = (1 - total_prob) * 100
+                    # FIXED: Use correct profit margin formula
+                    profit_margin = ((1 - total_prob) / total_prob) * 100
                     
-                    # Skip if profit margin is outside the specified range
-                    if (MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN) or \
-                       (MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN):
-                        print(f"Skipping opportunity with profit margin {profit_margin:.2f}% (outside range {MIN_PROFIT_MARGIN}%-{MAX_PROFIT_MARGIN}%)")
+                    # Debug the filtering logic
+                    print(f"\n=== DEBUG: Checking h2h opportunity (Away vs Home) ===")
+                    print(f"Event: {event_key}")
+                    print(f"Bookmaker 1: {bm1['bookmaker']} ({away_team})")
+                    print(f"Bookmaker 2: {bm2['bookmaker']} ({home_team})")
+                    print(f"Calculated profit_margin: {profit_margin:.4f}%")
+                    print(f"MIN check: {MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN if MIN_PROFIT_MARGIN is not None else 'N/A'}")
+                    print(f"MAX check: {MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN if MAX_PROFIT_MARGIN is not None else 'N/A'}")
+                    
+                    # Check minimum profit margin
+                    if MIN_PROFIT_MARGIN is not None and profit_margin < MIN_PROFIT_MARGIN:
+                        print(f"❌ FILTERED OUT: profit_margin ({profit_margin:.4f}) < MIN_PROFIT_MARGIN ({MIN_PROFIT_MARGIN})")
                         continue
+                    
+                    # Check maximum profit margin
+                    if MAX_PROFIT_MARGIN is not None and profit_margin > MAX_PROFIT_MARGIN:
+                        print(f"❌ FILTERED OUT: profit_margin ({profit_margin:.4f}) > MAX_PROFIT_MARGIN ({MAX_PROFIT_MARGIN})")
+                        continue
+                    
+                    print(f"✅ PASSED FILTER: Adding opportunity with {profit_margin:.4f}% profit margin")
                     
                     bet1 = f"{away_team} (Win)"
                     bet2 = f"{home_team} (Win)"
@@ -563,6 +638,12 @@ def find_arbitrage(odds_list):
     
     # Sort opportunities by profit margin (highest first)
     arbitrage_opportunities.sort(key=lambda x: x[14], reverse=True)
+    
+    # Debug: Final results
+    print(f"\n=== DEBUG: Final Results ===")
+    print(f"Total opportunities after filtering: {len(arbitrage_opportunities)}")
+    for i, opp in enumerate(arbitrage_opportunities[:5]):  # Show first 5
+        print(f"  {i+1}. Profit margin: {opp[14]:.4f}%")
     
     return arbitrage_opportunities
 
