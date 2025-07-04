@@ -32,7 +32,7 @@ MAX_HOURS_UNTIL_EVENT = 24  # Only consider events within this many hours
 # ====================================================================
 
 # API Key for The-Odds-API (Replace with your actual key)
-API_KEY = "a701e5b5cc998ed02c197eef0f4e6027"  # Replace with your The-Odds-API key
+API_KEY = ""  # Replace with your The-Odds-API key
 BASE_URL = "https://api.the-odds-api.com/v4/sports/{sport_key}/odds"
 
 # List of sports and leagues to track
